@@ -1,21 +1,17 @@
-from contextlib import asynccontextmanager
-
 from fastapi import FastAPI
 
-from app.core.db import Base, SessionLocal, engine
+from app.core.logging import configure_logging, register_exception_logging
+from app.core.middleware import RequestLoggingMiddleware
 from app.domains.courses.router import router as courses_router
 from app.domains.health.router import router as health_router
-from app.seed.build_course import seed_build_course
 
+configure_logging()
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    Base.metadata.create_all(bind=engine)
-    with SessionLocal() as db:
-        seed_build_course(db)
-    yield
+# Schema is applied by `alembic upgrade head`, never by the app at startup, so a
+# rollout can never silently reshape the database.
+app = FastAPI(title="Code2Prod API")
+app.add_middleware(RequestLoggingMiddleware)
+register_exception_logging(app)
 
-
-app = FastAPI(title="Code2Prod API", lifespan=lifespan)
 app.include_router(health_router)
 app.include_router(courses_router)

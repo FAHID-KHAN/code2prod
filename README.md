@@ -35,8 +35,20 @@ docker compose -f infrastructure/docker/docker-compose.yml up -d
 cd apps/api
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements-dev.txt
+cp .env.example .env
+alembic upgrade head
+python -m app.seed
 uvicorn app.main:app --reload
 ```
+
+See [apps/api/README.md](apps/api/README.md) for migrations, checks and layout.
+
+## Contributing
+
+- CI (`.github/workflows/ci.yml`) runs lint, type checks, tests and migrations for both apps on every
+  pull request. Keep `main` protected and require CI before merge.
+- Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/):
+  `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`.
 
 ## What's next
 

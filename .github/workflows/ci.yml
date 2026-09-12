@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: API — lint, types, migrations, tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: code2prod
+          POSTGRES_PASSWORD: code2prod
+          POSTGRES_DB: code2prod
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U code2prod"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: apps/api/requirements-dev.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Type check
+        run: mypy
+
+      - name: Tests
+        run: pytest -q
+
+      # Proves a fresh database reaches current schema from migrations alone,
+      # against the real engine rather than the SQLite used in tests.
+      - name: Migrations against PostgreSQL
+        env:
+          DATABASE_URL: postgresql+psycopg://code2prod:code2prod@localhost:5432/code2prod
+        run: |
+          alembic upgrade head
+          python -m app.seed
+
+      - name: Detect un-migrated model changes
+        env:
+          DATABASE_URL: postgresql+psycopg://code2prod:code2prod@localhost:5432/code2prod
+        run: alembic check
+
+  web:
+    name: Web — lint, types, build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type check
+        run: pnpm exec tsc --noEmit
+
+      - name: Build
+        run: pnpm build

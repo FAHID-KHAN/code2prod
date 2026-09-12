@@ -6,9 +6,18 @@ Section 16), so this is duplicated by hand for now — it should be replaced by 
 real content source once the admin panel exists.
 """
 
+from typing import TypedDict
+
 from sqlalchemy.orm import Session
 
 from app.domains.courses.models import Course, Mission, Sprint
+
+
+class MissionDetail(TypedDict, total=False):
+    context: str
+    ticket: str
+    acceptance_criteria: list[str]
+    submission_type: str
 
 # (number, title, mission_type) for every mission in the backlog.
 _BACKLOG: list[tuple[int, str, str]] = [
@@ -49,7 +58,7 @@ _SPRINTS: list[tuple[str, range]] = [
 
 # Full detail for the fully authored missions (1-5). See
 # docs/curriculum/missions/mission-0{n}-*.md for the complete spec.
-_MISSION_DETAIL: dict[int, dict] = {
+_MISSION_DETAIL: dict[int, MissionDetail] = {
     1: {
         "context": (
             "You just joined ByteBangla Technologies as a Junior Software Engineer "

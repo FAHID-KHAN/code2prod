@@ -1,0 +1,156 @@
+@import "tailwindcss";
+
+@theme {
+  --color-canvas: #08090d;
+  --color-surface: #0e1016;
+  --color-surface-2: #151821;
+  --color-ink: #e9ecf3;
+  --color-ink-muted: #99a0b0;
+  --color-ink-subtle: #666d7e;
+  --color-accent: #4fe08d;
+  --color-accent-deep: #1c8f56;
+  --color-accent-ink: #04170c;
+  --color-amber: #f5b544;
+  --color-danger: #ff6b6b;
+  --color-sky: #7da6ff;
+  --color-violet: #c792ea;
+}
+
+@theme inline {
+  --font-display: var(--font-display-family), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-sans-family), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono-family), ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+::selection {
+  background: rgba(79, 224, 141, 0.28);
+  color: #ffffff;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+}
+*::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* Faint engineering grid, faded out toward the edges. */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(ellipse 75% 55% at 50% 0%, #000 30%, transparent 100%);
+  mask-image: radial-gradient(ellipse 75% 55% at 50% 0%, #000 30%, transparent 100%);
+}
+
+.glow-top {
+  background: radial-gradient(ellipse 55% 45% at 50% 0%, rgba(79, 224, 141, 0.14), transparent 70%);
+}
+
+.glow-panel {
+  background: radial-gradient(ellipse 60% 60% at 50% 50%, rgba(79, 224, 141, 0.16), transparent 70%);
+}
+
+.panel-shadow {
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.04) inset,
+    0 30px 90px -25px rgba(0, 0, 0, 0.9);
+}
+
+@keyframes c2p-blink {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  55%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes c2p-rise {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes c2p-halo {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0;
+    transform: scale(2.4);
+  }
+}
+
+.caret {
+  animation: c2p-blink 1.1s steps(1) infinite;
+}
+
+.rise {
+  opacity: 0;
+  animation: c2p-rise 0.32s ease-out forwards;
+}
+
+.halo {
+  animation: c2p-halo 2.4s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .rise {
+    opacity: 1;
+  }
+}

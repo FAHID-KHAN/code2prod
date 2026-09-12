@@ -1,0 +1,19 @@
+# Node / Next.js
+node_modules/
+.next/
+apps/web/.next/
+apps/web/node_modules/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+apps/api/.venv/
+*.sqlite3
+
+# Env files
+.env
+.env.local
+
+# OS
+.DS_Store

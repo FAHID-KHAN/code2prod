@@ -8,6 +8,7 @@ from app.core.db import Base
 
 # Importing the model modules is what populates Base.metadata, which autogenerate
 # diffs against. A domain whose models are never imported here is invisible to it.
+from app.domains.auth import models as auth_models  # noqa: F401
 from app.domains.courses import models as courses_models  # noqa: F401
 
 config = context.config

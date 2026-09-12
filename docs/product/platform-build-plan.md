@@ -16,7 +16,7 @@ Source of requirements: Code2Prod Founding Product Blueprint v0.1 — section re
 | §11 must-have for first paid launch | Status |
 |---|---|
 | Landing page and product explanation | **Done** — `apps/web`, static, dark design system |
-| Email/password authentication | Not started |
+| Email/password authentication | **Done** — register, verify, login, refresh, logout, reset |
 | Free Foundations course | Not started (no content authored) |
 | BUILD course with 20-30 missions | **Partial** — 25-mission backlog defined, 5 fully authored |
 | Sprint/mission UI | Not started (design language exists and is reusable) |
@@ -51,22 +51,47 @@ shape; it is not yet the mission engine.
 **Exit criteria:** a fresh clone can migrate an empty database to current schema, CI blocks a failing
 PR, and no secret is readable in the repository.
 
-## Phase 1 — Identity and access
+## Phase 1 — Identity and access ✅ done
 
 **Goal:** a `user_id` that every later domain can hang off.
 
-- `users` and `profiles` tables (§19).
-- Password hashing with Argon2 through a proven library. §17 is explicit: avoid building
-  cryptography or session primitives yourself.
-- Register → verify email → login → password reset, each rate-limited (§20).
-- **Recommended:** httpOnly server-side sessions rather than JWT — revocation is trivial and the
-  lifecycle is much harder to get wrong. See "Open decisions".
-- Role enum from §13: `STUDENT`, `MENTOR`, `REVIEWER`, `SUPPORT_AGENT`, `CONTENT_CREATOR`, `ADMIN`,
-  `SUPER_ADMIN`, enforced by a FastAPI dependency **server-side**, never merely hidden in the UI.
-- CSRF protection for cookie-based state-changing requests (§20).
+**Decision taken: JWT access tokens + rotating refresh tokens.**
 
-**Exit criteria:** a learner can register, verify, log in and reset a password; a `STUDENT` receives
-403 from an admin-only endpoint even when calling the API directly.
+Access tokens are stateless HS256 JWTs with a 15-minute TTL, verified without a database round trip.
+The known weakness of that choice is revocation, so it is addressed directly rather than accepted:
+
+- Refresh tokens are opaque, **stored hashed**, and grouped into a *family* per login.
+- Every refresh rotates: the presented token is revoked and a successor issued in the same family.
+- Presenting an already-revoked token means it leaked, so the **entire family is burned** — this is
+  the standard reuse-detection pattern, and it protects the honest holder as well as the account.
+- Logout revokes the family; a password reset revokes every family the user has.
+- The user's **role is re-read from the database on each request** rather than trusted from the token
+  claim, so a demotion or deactivation takes effect immediately instead of at token expiry.
+
+The one accepted residual: a still-valid access token survives revocation for at most
+`ACCESS_TOKEN_TTL_MINUTES`. That window is the reason the TTL is short, and it is the price of
+stateless verification.
+
+Also built:
+
+- `users`, `profiles`, `refresh_tokens`, `one_time_tokens` (§19).
+- Argon2 hashing via `argon2-cffi`; `secrets.token_urlsafe` for opaque tokens; PyJWT for JWTs —
+  no hand-rolled cryptography (§17).
+- Register → verify email → login → refresh → logout → password reset, each rate-limited (§20).
+- Account-enumeration resistance: registration and password-reset requests return an identical
+  response whether or not the address exists, and a wrong password is indistinguishable from an
+  unknown account, including in timing (a dummy hash is verified when no user matches).
+- Role enum from §13 enforced by a `require_role` dependency **server-side** (§20).
+- Refresh cookie is httpOnly + `SameSite=Strict`, which is what defends the cookie-based refresh
+  endpoint from CSRF; the access token travels in an `Authorization` header and is unaffected.
+
+**Exit criteria — met.** 28 tests cover the flows plus reuse detection, session revocation on reset,
+one-time-token replay, enumeration resistance, and a `STUDENT` receiving 403 from an admin-only
+endpoint called directly.
+
+**Carried forward:** rate limiting is in-process, so limits are per-instance and reset on deploy.
+That is adequate for a single-instance launch but must move to a shared store before the API runs
+more than one replica. Email is logged rather than sent until Phase 6.
 
 ## Phase 2 — Real content model and admin authoring
 
@@ -178,13 +203,13 @@ are documented and visible.
 
 These need a call before the phase that depends on them:
 
-| Decision | Phase | Recommendation |
+| Decision | Phase | Status |
 |---|---|---|
-| Sessions vs JWT | 1 | httpOnly server-side sessions — simpler revocation |
-| Auth in-house vs library/service | 1 | Proven library; §17 warns against rolling your own |
-| Admin location | 2 | `/admin` inside the web app, role-gated |
-| Content source of truth | 2 | Database, exported to version control for history |
-| Redis | 3-4 | Only when a real queue/cache need appears (§17) |
+| Sessions vs JWT | 1 | **Decided:** JWT access + rotating refresh with reuse detection |
+| Auth in-house vs library/service | 1 | **Decided:** in-house flows on proven primitives (argon2-cffi, PyJWT) |
+| Admin location | 2 | Open — recommend `/admin` inside the web app, role-gated |
+| Content source of truth | 2 | Open — recommend database, exported to version control for history |
+| Redis | 3-4 | Open — only when a real queue/cache need appears (§17), or when rate limiting must span replicas |
 
 ## Known debt to retire along the way
 

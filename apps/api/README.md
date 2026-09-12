@@ -57,14 +57,29 @@ introduce a new domain, or its tables will be silently missing from migrations.
 
 ```
 app/
-  core/          settings, database session, logging, middleware
+  core/          settings, database session, logging, middleware, security, rate limiting
   domains/
     health/      liveness endpoint
+    auth/        users, profiles, JWT + rotating refresh tokens, RBAC
     courses/     Course -> Sprint -> Mission read model
   seed/          bootstrap content (python -m app.seed)
 migrations/      alembic
 tests/
 ```
+
+## Authentication
+
+Access tokens are stateless 15-minute JWTs sent as `Authorization: Bearer …`. Refresh tokens are
+opaque, stored hashed, and rotate on every use; presenting an already-rotated token is treated as a
+leak and revokes that token's whole family. The refresh token rides in an httpOnly `SameSite=Strict`
+cookie for browsers, and an `x-refresh-token` header is accepted for native clients.
+
+Because access tokens are verified without a database lookup, revoking a session takes effect on the
+refresh token immediately but on the access token only when it expires — hence the short TTL. The
+user's role, however, *is* re-read per request, so demotions and deactivations apply instantly.
+
+Email is written to the log rather than sent until a provider is wired up, so verification and reset
+tokens are readable in local output.
 
 ## What's here vs. what's next
 

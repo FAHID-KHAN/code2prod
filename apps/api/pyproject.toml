@@ -5,6 +5,10 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "C4"]
 
+[tool.ruff.lint.per-file-ignores]
+# Alembic writes these; reformatting generated output by hand invites merge pain.
+"migrations/versions/*" = ["E501"]
+
 [tool.ruff.lint.flake8-bugbear]
 # FastAPI's dependency injection requires these in argument defaults by design.
 extend-immutable-calls = [
